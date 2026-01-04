@@ -23,6 +23,7 @@ export default function Home() {
 
     // UX State
     const [gameStarted, setGameStarted] = useState(false);
+    const [showInstructions, setShowInstructions] = useState(false);
     const [isShopOpen, setIsShopOpen] = useState(false);
     const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
     const [user, setUser] = useState(null);
@@ -32,6 +33,10 @@ export default function Home() {
     // Gamification State
     const [unlockedAchievements, setUnlockedAchievements] = useState([]);
     const [currentAchievement, setCurrentAchievement] = useState(null);
+
+    // Audio State
+    const [isMuted, setIsMuted] = useState(false);
+    const audioRef = useRef(null);
 
     // Video Ref
     const videoRef = useRef(null);
@@ -69,6 +74,39 @@ export default function Home() {
             videoRef.current.play().catch(() => { });
         }
     }, []);
+
+    // --- AUDIO SINGLETON SETUP ---
+    useEffect(() => {
+        // Create audio instance only once
+        audioRef.current = new Audio('/coinflip.mp3');
+        audioRef.current.loop = true;
+        audioRef.current.volume = 0.5;
+
+        // CLEANUP: Stop audio on unmount/refresh
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                audioRef.current = null;
+            }
+        };
+    }, []);
+
+    // --- AUDIO PLAYBACK CONTROL ---
+    useEffect(() => {
+        if (!audioRef.current) return;
+
+        if (gameStarted && !isMuted) {
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Audio play blocked:", error);
+                });
+            }
+        } else if (!gameStarted || isMuted) {
+            audioRef.current.pause();
+        }
+    }, [gameStarted, isMuted]);
 
     // --- LOOPS ---
     useEffect(() => {
@@ -110,12 +148,20 @@ export default function Home() {
 
     // --- ACTIONS ---
     const handleStartGame = () => {
-        if (videoRef.current) {
-            videoRef.current.muted = false;
-            videoRef.current.play().catch(() => { });
-        }
         playStartup();
         setGameStarted(true);
+        // Audio playback is handled by useEffect watching gameStarted
+    };
+
+    // Toggle mute
+    const toggleMute = () => {
+        setIsMuted(prev => {
+            const newMuted = !prev;
+            if (audioRef.current) {
+                audioRef.current.muted = newMuted;
+            }
+            return newMuted;
+        });
     };
 
     const handleClick = useCallback((e) => {
@@ -156,7 +202,7 @@ export default function Home() {
     if (!hydrated) return <div className="min-h-screen bg-black flex items-center justify-center text-neon-orange font-bold font-mono animate-pulse">LOADING SYSTEM...</div>;
 
     return (
-        <main className="w-full min-h-[100dvh] bg-black flex items-center justify-center overflow-hidden font-sans">
+        <main role="main" className="w-full min-h-[100dvh] bg-black flex items-center justify-center overflow-hidden font-sans">
 
             {/* PHONE FRAME CONTAINER - Video and game inside */}
             <div className="game-wrapper">
@@ -181,21 +227,59 @@ export default function Home() {
                 {/* Floor Gradient */}
                 <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/60 to-transparent z-10 pointer-events-none"></div>
 
-                {/* --- INTRO SCREEN --- */}
-                {!gameStarted && (
-                    <div
-                        onClick={handleStartGame}
-                        className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center cursor-pointer"
-                    >
-                        <div className="relative mb-8">
-                            <div className="absolute inset-0 bg-yellow-500/20 blur-[60px] rounded-full"></div>
-                            <h1 className="relative text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-orange-600 drop-shadow-[0_0_30px_rgba(255,165,0,0.6)] tracking-tight text-center leading-tight">
-                                TIMBA<br />CASINO
+                {/* --- INTRO/HELP SCREEN --- */}
+                {(!gameStarted || showInstructions) && (
+                    <div className="absolute inset-0 z-[100] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center overflow-y-auto py-8">
+                        {/* Title */}
+                        <div className="relative mb-4">
+                            <div className="absolute inset-0 bg-yellow-500/30 blur-[80px] rounded-full"></div>
+                            <h1 className="relative text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-400 to-orange-600 drop-shadow-[0_0_40px_rgba(255,165,0,0.8)] tracking-tight text-center leading-none">
+                                TIMBA<br />CLICKER
                             </h1>
                         </div>
-                        <p className="text-white/90 text-sm font-bold tracking-[0.3em] animate-pulse border border-white/20 px-6 py-3 rounded-full bg-white/5 backdrop-blur-md hover:bg-white/10 transition-colors">
-                            TAP TO START
-                        </p>
+
+                        {/* Bilingual Instructions */}
+                        <div className="text-center px-6 max-w-[340px] mb-6">
+                            {/* --- SPANISH SECTION --- */}
+                            <div className="mb-4 border-b border-white/20 pb-4">
+                                <h2 className="text-lg font-bold text-yellow-400 mb-2">🇪🇸 ESPAÑOL</h2>
+                                <p className="text-gray-400 text-[10px] mb-3">
+                                    Genera ganancias infinitas con cada toque. Acumula fortuna, mejora tu multiplicador y demuestra qué tan rápido puedes hacer crecer tu banco.
+                                </p>
+                                <ul className="space-y-1 text-left text-xs text-white">
+                                    <li>👆 <span className="font-bold text-yellow-400">Toca la moneda</span> para ganar "Timbitas".</li>
+                                    <li>🚀 <span className="font-bold text-blue-400">Compra mejoras</span> para multiplicar tus clicks.</li>
+                                    <li>🤑 <span className="font-bold text-green-400">Canjea tus Timbitas</span> por <span className="underline decoration-yellow-500 font-black">TIMBAS REALES.</span></li>
+                                </ul>
+                            </div>
+
+                            {/* --- ENGLISH SECTION --- */}
+                            <div>
+                                <h2 className="text-lg font-bold text-yellow-400 mb-2">🇺🇸 ENGLISH</h2>
+                                <p className="text-gray-400 text-[10px] mb-3">
+                                    Generate infinite earnings with every tap. Accumulate fortune, buy upgrades, and prove how fast you can grow your bank.
+                                </p>
+                                <ul className="space-y-1 text-left text-xs text-white">
+                                    <li>👆 <span className="font-bold text-yellow-400">Tap the coin</span> to earn "Timbitas".</li>
+                                    <li>🚀 <span className="font-bold text-blue-400">Buy upgrades</span> to multiply your income.</li>
+                                    <li>🤑 <span className="font-bold text-green-400">Exchange Timbitas</span> for <span className="underline decoration-yellow-500 font-black">REAL TIMBAS.</span></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Play/Resume Button */}
+                        <button
+                            onClick={() => {
+                                if (!gameStarted) {
+                                    handleStartGame();
+                                } else {
+                                    setShowInstructions(false);
+                                }
+                            }}
+                            className="px-12 py-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black text-xl tracking-widest rounded-full shadow-[0_0_30px_rgba(255,165,0,0.6)] hover:shadow-[0_0_50px_rgba(255,165,0,0.8)] hover:scale-105 active:scale-95 transition-all"
+                        >
+                            {gameStarted ? 'RESUME' : 'PLAY'}
+                        </button>
                     </div>
                 )}
 
@@ -217,6 +301,24 @@ export default function Home() {
                 {/* --- GAMEPLAY UI --- */}
                 {gameStarted && (
                     <>
+                        {/* HELP BUTTON - Top Left */}
+                        <button
+                            onClick={() => setShowInstructions(true)}
+                            aria-label="Open Instructions"
+                            className="absolute top-4 left-4 z-40 w-10 h-10 bg-black/50 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/10 active:scale-95 transition-all"
+                        >
+                            ❔
+                        </button>
+
+                        {/* MUTE BUTTON - Top Right */}
+                        <button
+                            onClick={toggleMute}
+                            aria-label={isMuted ? "Unmute Audio" : "Mute Audio"}
+                            className="absolute top-4 right-4 z-40 w-10 h-10 bg-black/50 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-xl hover:bg-white/10 active:scale-95 transition-all"
+                        >
+                            {isMuted ? '🔇' : '🔊'}
+                        </button>
+
                         {/* HEADER UI */}
                         <div className="absolute top-0 left-0 right-0 z-30 pt-8 px-4 flex flex-col items-center gap-2 animate-[slideDown_0.8s_ease-out] pointer-events-none text-white">
                             <div>
@@ -249,11 +351,13 @@ export default function Home() {
                         <div
                             className="coin-container"
                             onClick={(e) => { if (energy >= 1) handleClick(e); }}
+                            role="button"
+                            aria-label="Tap coin to earn Timbitas"
                         >
                             <div className="coin-wrapper">
                                 {/* Front Face with Texture */}
                                 <div className="coin-face front">
-                                    <img src="/coin-spin.png" alt="" draggable={false} />
+                                    <img src="/coin-spin.png" alt="Timba Gold Coin Clicker - Tap to earn" draggable={false} />
                                 </div>
 
                                 {/* Solid Gold Body (16 layers for thickness) */}
@@ -267,7 +371,7 @@ export default function Home() {
 
                                 {/* Back Face with Texture */}
                                 <div className="coin-face back">
-                                    <img src="/coin-spin.png" alt="" draggable={false} />
+                                    <img src="/coin-spin.png" alt="Timba Gold Coin - Back side" draggable={false} />
                                 </div>
                             </div>
                         </div>

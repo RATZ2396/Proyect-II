@@ -1,15 +1,33 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// SEO OPTIMIZED METADATA
 export const metadata = {
-    title: 'Timba Clicker',
-    description: 'The ultimate casino clicker game',
+    title: 'Timba Clicker | Ganancias Infinitas & Timbas Reales',
+    description: 'El juego clicker viral. Toca la moneda, acumula fortuna y canjea tus puntos por Timbas Reales. Play the ultimate casino idle game now.',
+    keywords: ['Timba Clicker', 'Casino Game', 'Juego de Clicker', 'Ganar Dinero', 'Idle Game', 'Timba Casino', 'Next.js Game', 'Clicker Viral'],
+    authors: [{ name: 'Timba Games' }],
+    creator: 'Timba Games',
+    publisher: 'Timba Games',
+    robots: 'index, follow',
+    openGraph: {
+        title: '👑 TIMBA CLICKER - ¿Eres Millonario?',
+        description: 'Entra y demuestra cuánto puedes ganar. ¡Canje real disponible!',
+        type: 'website',
+        locale: 'es_ES',
+        siteName: 'Timba Clicker',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: '👑 TIMBA CLICKER - ¿Eres Millonario?',
+        description: 'El juego clicker viral. ¡Canjea tus Timbitas por premios reales!',
+    },
 };
 
 // STRICT VIEWPORT CONFIG for all platforms
-// Blocks Telegram's 10% zoom, prevents user scaling
 export const viewport = {
     width: 'device-width',
     initialScale: 1,
@@ -22,7 +40,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
     return (
-        <html lang="en">
+        <html lang="es">
             <head>
                 {/* Telegram WebApp SDK */}
                 <script src="https://telegram.org/js/telegram-web-app.js" async></script>
@@ -32,20 +50,17 @@ export default function RootLayout({ children }) {
                 <meta name="mobile-web-app-capable" content="yes" />
                 <meta name="format-detection" content="telephone=no" />
 
-                {/* Telegram Detection Script - Robust detection for WebApp and in-app browser */}
+                {/* Telegram Detection Script */}
                 <script dangerouslySetInnerHTML={{
                     __html: `
                         (function() {
                             var isTelegram = false;
-                            // Check for Telegram WebApp SDK
                             if (typeof window !== 'undefined' && window.Telegram && window.Telegram.WebApp) {
                                 isTelegram = true;
                             }
-                            // Check userAgent for Telegram in-app browser
                             if (typeof navigator !== 'undefined' && /Telegram/i.test(navigator.userAgent)) {
                                 isTelegram = true;
                             }
-                            // Apply class to both html and body for maximum CSS specificity
                             if (isTelegram) {
                                 document.documentElement.classList.add('is-telegram', 'telegram-web');
                                 document.addEventListener('DOMContentLoaded', function() {
@@ -56,7 +71,36 @@ export default function RootLayout({ children }) {
                     `
                 }} />
             </head>
-            <body className={inter.className}>{children}</body>
+            <body className={inter.className}>
+                {/* JSON-LD Structured Data for SEO */}
+                <Script
+                    id="json-ld"
+                    type="application/ld+json"
+                    strategy="beforeInteractive"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@type": "VideoGame",
+                            "name": "Timba Clicker",
+                            "description": "El juego clicker viral. Toca la moneda, acumula fortuna y canjea tus puntos por Timbas Reales.",
+                            "operatingSystem": "Web, Android, iOS",
+                            "applicationCategory": "Game",
+                            "gamePlatform": ["Web Browser", "Mobile"],
+                            "genre": ["Clicker", "Idle", "Casino"],
+                            "offers": {
+                                "@type": "Offer",
+                                "price": "0",
+                                "priceCurrency": "USD"
+                            },
+                            "author": {
+                                "@type": "Organization",
+                                "name": "Timba Games"
+                            }
+                        })
+                    }}
+                />
+                {children}
+            </body>
         </html>
     );
 }
